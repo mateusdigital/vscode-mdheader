@@ -128,6 +128,7 @@ function _DateToStr(date)
   return str;
 }
 
+// -----------------------------------------------------------------------------
 function _GetGitFolderName(filename)
 {
   const dirname = path.dirname(filename);
@@ -141,7 +142,8 @@ function _GetGitFolderName(filename)
 
     return project_name;
   } catch(error) {
-    return null;
+    const project_name = path.basename(dirname);
+    return project_name;
   }
 }
 
@@ -157,6 +159,7 @@ function _GetCommentForLanguage(languageId)
     "javascript": { lineComment: "//", blockComment: ["/*", "*/"] },
     "typescript": { lineComment: "//", blockComment: ["/*", "*/"] },
     "python":     { lineComment: "##", blockComment: null },
+    "powershell": { lineComment: "##", blockComment: null },
     "shellscript":{ lineComment: "##", blockComment: null },
   }
 
