@@ -67,17 +67,10 @@ function deactivate()
 
 }
 
-async function asyncToSync(asyncFn, ...args) {
-  try {
-      return await asyncFn(...args);
-  } catch (error) {
-      throw error;
-  }
-}
-
 //
 // Private methods
 //
+
 // -----------------------------------------------------------------------------
 function _GetGitFileDate(filename)
 {
