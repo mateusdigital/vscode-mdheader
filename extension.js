@@ -1,9 +1,36 @@
+//----------------------------------------------------------------------------//
+//                               *       +                                    //
+//                         '                  |                               //
+//                     ()    .-.,="``"=.    - o -                             //
+//                           '=/_       \     |                               //
+//                        *   |  '=._    |                                    //
+//                             \     `=./`,        '                          //
+//                          .   '=.__.=' `='      *                           //
+//                 +                         +                                //
+//                      O      *        '       .                             //
+//                                                                            //
+//  File      : extension.js                                                  //
+//  Project   : mdheder                                                       //
+//  Date      : 2024-04-24                                                    //
+//  License   : See project's COPYING.TXT for full info.                      //
+//  Author    : mateus.digital <hello@mateus.digital>                         //
+//  Copyright : mateus.digital - 2024                                         //
+//                                                                            //
+//  Description :                                                             //
+//                                                                            //
+//----------------------------------------------------------------------------//
 
+//
+// Imports
+//
+
+// -----------------------------------------------------------------------------
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 //
 const vscode = require("vscode");
+
 
 //
 // Public Methods
