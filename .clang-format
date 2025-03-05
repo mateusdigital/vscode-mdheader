@@ -87,7 +87,7 @@ IndentWidth: 2
 InsertTrailingCommas: None
 LineEnding: LF
 InsertNewlineAtEOF: true
-SortIncludes: CaseInsensitive
+SortIncludes: false
 ## -----------------------------------------------------------------------------
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false

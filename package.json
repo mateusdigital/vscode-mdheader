@@ -1,17 +1,22 @@
 {
   "name": "mdheader",
-  "displayName": "mdheader",
+  "displayName": "mateusdigital - header",
   "description": "Tool to be able to add header comments with file information",
+  "publisher": "mateusdigital",
   "repository": "https://github.com/mateusdigital/mdheader",
-  "version": "0.0.2",
+  "website": "https://mateusdigital.com/projects/mdheader",
+  "bugs": "https://github.com/mateusdigital/mdheader/issues",
+  "main": "./out/extension.js",
+  "icon": "res/images/icon.png",
+  "version": "1.0.0",
+  "build": 0,
   "engines": {
-    "vscode": "^1.54.0"
+    "vscode": "^1.88.0"
   },
   "categories": [
     "Other"
   ],
   "activationEvents": [],
-  "main": "./extension.js",
   "contributes": {
     "commands": [
       {
@@ -21,20 +26,27 @@
     ]
   },
   "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
-    "test": "vscode-test"
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
-    "@types/vscode": "^1.54.0",
+    "@types/vscode": "^1.88.0",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
     "@vscode/test-cli": "^0.0.8",
     "@vscode/test-electron": "^2.3.9",
     "eslint": "^8.57.0",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "git-js": "^1.1.1"
+    "json5": "^2.2.3"
   }
 }
