@@ -5,20 +5,23 @@
 
 // -----------------------------------------------------------------------------
 import path from "path";
+import os, { UserInfo } from "os";
+// -----------------------------------------------------------------------------
 import * as vscode from "vscode";
 // -----------------------------------------------------------------------------
-import {DateUtils} from "./DateUtils";
-import {FSUtils} from "./FSUtils";
-import {GitUtils} from "./GitUtils";
-import {VSCodeUtils, ICommentInfo} from "./VSCodeUtils";
+import { VSCodeUtils }  from "../libs/lib-mdViseu/mdViseu/VSUtils";
+import { GitUserInfo, GitUtils } from "../libs/lib-mdViseu/mdViseu/GitUtils";
+import { DateUtils } from "../libs/lib-mdViseu/mdViseu/DateUtils";
+import { FSUtils } from "../libs/lib-mdViseu/mdViseu/FSUtils";
+import { ErrorUtils } from "../libs/lib-mdViseu/mdViseu/ErrorUtils";
+import { CommentInfo, CommentUtils } from "../libs/lib-mdViseu/mdViseu/CommentUtils";
 
 //
 // Public Functions
 //
 
 // -----------------------------------------------------------------------------
-export function activate(context: vscode.ExtensionContext)
-{
+export function activate(context: vscode.ExtensionContext) {
   // ---------------------------------------------------------------------------
   const disposable = vscode.commands.registerCommand(
     'mdheader.addHeader', () => { _AddHeader(); }
@@ -28,53 +31,45 @@ export function activate(context: vscode.ExtensionContext)
 }
 
 // -----------------------------------------------------------------------------
-export function deactivate() {}
+export function deactivate() { }
 
 //
 // Private Functions
 //
 
 // -----------------------------------------------------------------------------
-function _AddHeader()
-{
-  const curr_editor = vscode.window.activeTextEditor;
-  if (!curr_editor) {
-    return;
-  }
+function _AddHeader() {
 
   // Get the file info
-  const uri      = curr_editor.document.uri;
-  const filepath = uri.fsPath;
-  const filename = path.basename(filepath);
+  const filepath = VSCodeUtils.GetActiveTextEditorFilePath();
+  if (!filepath) {
+    ErrorUtils.ShowErrorToUser("No active editor found.");
+    return;
+  }
 
   // Get the project info.
-  const git_root     = GitUtils.GetRoot(filepath);
-  const project_name = path.basename(git_root);
+  const git_root = GitUtils.GetRoot(filepath);
+  const user_info = _GetUserInfo(filepath, git_root);
+  const project_name = path.basename((git_root) ? git_root : filepath);
+  const file_date = _GetDateFromFile(filepath);
 
-  // Get the date info.
-  let file_date = GitUtils.GetInitialFileDate(filepath);
-  if (!file_date) {
-    file_date = FSUtils.GetFileCreationDate(filepath);
-  }
-  if (!file_date) {
-    file_date = new Date();
-  }
-
-  // Get the comment info.
-  const language_id  = curr_editor.document.languageId;
-  const comment_info = VSCodeUtils.GetCommentInfo(language_id);
+  const comment_info = CommentUtils.CreateCommentInfo(VSCodeUtils.ActiveEditor());
   if (!comment_info) {
+    ErrorUtils.ShowErrorToUser("Failed to retrieve comment information.");
     return;
   }
 
   //
-  const header_arr =
-    _CreateHeader(filename, project_name, file_date, comment_info);
-
-  const header_str = header_arr.join('\n');
+  const header_str = _CreateHeader(
+    filepath,
+    project_name,
+    file_date,
+    comment_info,
+    user_info
+  );
 
   //
-  curr_editor.edit(edit_builder => {
+  VSCodeUtils.ActiveEditor().edit(edit_builder => {
     edit_builder.insert(new vscode.Position(0, 0), header_str);
   });
 }
@@ -85,56 +80,53 @@ function _AddHeader()
 
 // -----------------------------------------------------------------------------
 function _CreateHeader(
-  filename: string,
+  filepath: string,
   projectName: string,
   fileDate: Date,
-  commentInfo: ICommentInfo
-)
-{
+  commentInfo: CommentInfo,
+  user_info: GitUserInfo
+): string {
+  const MAX_COLUMNS = 80;
+  const HEADER_TEMPLATE = _GetSelectedHeaderTemplate();
   const copyright_year = _CalculateCopyrightYear(fileDate);
 
-  //
-  const comment_start = (commentInfo.lineComment) ? commentInfo.lineComment
-                                                  : commentInfo.blockComment[0];
-  const comment_end   = (commentInfo.lineComment) ? commentInfo.lineComment
-                                                  : commentInfo.blockComment[1];
-
-  const comment_length = (comment_start.length + comment_end.length);
+  const edge_options = { maxColumns: MAX_COLUMNS, fill: "-", padLeft: true, padRight: true, preferSingleLineComments: true };
+  const inner_options = { maxColumns: MAX_COLUMNS, fill: " ", padLeft: false, padRight: true, preferSingleLineComments: true };
 
   //
-  const MAX_COLUMNS = 80;
-  const BORDER_LINE =
-    comment_start + '-'.repeat(MAX_COLUMNS - comment_length) + comment_end;
+  const edge_line = CommentUtils.SurroundWithComments(commentInfo, "", edge_options);
 
-  //
-  const value = [];
-  value.push(BORDER_LINE);
+  const header_lines: string[] = [];
+  header_lines.push(edge_line);
 
-  const HEADER_TEMPLATE = "";
   for (let i = 0; i < HEADER_TEMPLATE.length; ++i) {
-    const line          = HEADER_TEMPLATE[i];
-    const replaced_line = line.replace('FILENAME', filename)
-                            .replace('PROJECT', projectName)
-                            .replace('DATE', DateUtils.To_YYYY_MM_DD(fileDate))
-                            .replace('YEAR', copyright_year);
+    const line = HEADER_TEMPLATE[i];
+    const replaced_line = line
+      .replace('FILENAME', path.basename(filepath))
+      .replace('PROJECT', projectName)
+      .replace('DATE', DateUtils.To_YYYY_MM_DD(fileDate))
+      .replace('YEAR', copyright_year)
+      .replace("USER_NAME", user_info.name)
+      .replace("USER_EMAIL", user_info.email)
+      ;
 
-    const fill =
-      ' '.repeat(MAX_COLUMNS - (comment_length + replaced_line.length));
-    const filled_line = `${comment_start}${replaced_line}${fill}${comment_end}`;
+    const commented_line = CommentUtils.SurroundWithComments(
+      commentInfo,
+      replaced_line,
+      inner_options
+    );
 
-    value.push(filled_line);
+    header_lines.push(commented_line);
   }
 
-  value.push(BORDER_LINE);
-  value.push('');
-
-  return value;
+  header_lines.push(edge_line);
+  return header_lines.join("\n") + "\n\n";
 }
 
+
 // -----------------------------------------------------------------------------
-function _CalculateCopyrightYear(fileDate: Date): string
-{
-  const year      = fileDate.getFullYear();
+function _CalculateCopyrightYear(fileDate: Date): string {
+  const year = fileDate.getFullYear();
   const curr_year = new Date().getFullYear();
 
   if (year == curr_year) {
@@ -142,4 +134,39 @@ function _CalculateCopyrightYear(fileDate: Date): string
   }
 
   return `${year} - ${curr_year}`;
+}
+
+// -----------------------------------------------------------------------------
+function _GetDateFromFile(filepath: string) {
+  let file_date = GitUtils.GetInitialFileDate(filepath);
+  if (!file_date) {
+    file_date = FSUtils.GetFileCreationDate(filepath);
+  }
+  if (!file_date) {
+    file_date = new Date();
+  }
+  return file_date
+}
+
+// -----------------------------------------------------------------------------
+function _GetSelectedHeaderTemplate(): Array<string> {
+  const str = ( ""
+    + "  File      : FILENAME \n"
+    + "  Project   : PROJECT  \n"
+    + "  Date      : DATE     \n"
+    + "  Copyright : YEAR     \n"
+    + "  Copyright : USER_NAME <USER_EMAIL>"
+  ).split("\n");
+
+  return str;
+}
+
+
+// -----------------------------------------------------------------------------
+function _GetUserInfo(filepath: string, gitRoot: string | null): GitUserInfo {
+  if (gitRoot) {
+    return GitUtils.GetUserInfo(gitRoot);
+  }
+
+  return { name: os.userInfo().username, email: "" };
 }
